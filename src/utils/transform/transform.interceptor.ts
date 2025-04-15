@@ -17,11 +17,13 @@ export class TransformInterceptor<T>
     next: CallHandler,
   ): Observable<Response<T>> {
     return next.handle().pipe<Response<T>>(
-      map<any, Response<T>>((data: { message: string; result: T }) => {
+      map<any, Response<T>>((data: { message: string | null; result: T }) => {
+        const statusCode =
+          context.switchToHttp().getResponse<{ statusCode: number }>()
+            .statusCode || 500;
         return {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-          statusCode: context.switchToHttp().getResponse().statusCode || 500,
-          message: data.message,
+          statusCode,
+          message: data.message || (statusCode == 500 ? 'Server Error' : 'OK'),
           data: data.result,
         };
       }),

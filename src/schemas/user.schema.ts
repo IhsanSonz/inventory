@@ -26,8 +26,14 @@ export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.pre('save', async function (next) {
   try {
+    const password = this.get('password');
+    if (password) {
+      const hashed: string = await bcrypt.hash(password, 16);
+      this.set({ password: hashed });
+    }
+
     const refreshToken = this.get('refreshToken');
-    if (this.password) {
+    if (refreshToken) {
       const hashed: string = await bcrypt.hash(refreshToken, 16);
       this.set({ refreshToken: hashed });
     }
@@ -41,6 +47,8 @@ UserSchema.pre('save', async function (next) {
 UserSchema.set('toJSON', {
   transform: function (doc, ret) {
     delete ret['password'];
+    delete ret['refreshToken'];
+    delete ret['__v'];
     return ret;
   },
 });
