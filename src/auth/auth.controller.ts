@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Post,
   Req,
   UseGuards,
@@ -10,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { TransformInterceptor } from 'src/utils/transform/transform.interceptor';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dtos/register.dto';
+import { LoginDto, RegisterDto } from './auth.dto';
 import { AccessTokenGuard } from 'src/common/access-token/access-token.guard';
 import { Request } from 'express';
 
@@ -23,6 +24,14 @@ export class AuthController {
   async register(@Body() registerDto: RegisterDto): Promise<any> {
     return {
       result: await this.authService.register(registerDto),
+    };
+  }
+
+  @Post('login')
+  @HttpCode(200)
+  async login(@Body() loginDto: LoginDto): Promise<any> {
+    return {
+      result: await this.authService.login(loginDto),
     };
   }
 

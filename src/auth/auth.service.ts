@@ -1,11 +1,20 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { RegisterDto } from './dtos/register.dto';
+import { LoginDto, RegisterDto } from './auth.dto';
 import { UserDocument } from 'src/schemas/user.schema';
+import * as bcrypt from 'bcrypt';
 
+interface AuthInterface {
+  user: UserDocument;
+  tokens: { accessToken: string; refreshToken: string };
+}
 @Injectable()
 export class AuthService {
   constructor(
@@ -14,10 +23,7 @@ export class AuthService {
     @InjectModel('User') private readonly userModel: Model<UserDocument>,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<{
-    user: UserDocument;
-    tokens: { accessToken: string; refreshToken: string };
-  }> {
+  async register(registerDto: RegisterDto): Promise<AuthInterface> {
     const checkUser = await this.findUserByEmail(registerDto.email);
     if (checkUser) {
       throw new BadRequestException('Email already in use.');
@@ -39,6 +45,26 @@ export class AuthService {
     };
   }
 
+  async login(loginDto: LoginDto): Promise<AuthInterface> {
+    const user = await this.findUserByEmail(loginDto.email);
+    if (!user) {
+      throw new NotFoundException('Wrong email or password.');
+    }
+
+    await this.checkPassword(loginDto.password, user);
+
+    const tokens = await this.createAccessToken(
+      user._id.toString(),
+      user.username,
+    );
+    await this.updateRefreshToken(user._id.toString(), tokens.refreshToken);
+
+    return {
+      user,
+      tokens,
+    };
+  }
+
   async user(userId: string): Promise<{
     user: UserDocument;
   }> {
@@ -53,8 +79,16 @@ export class AuthService {
   }
 
   private async findUserByEmail(email: string): Promise<UserDocument | null> {
-    const user = await this.userModel.findOne<UserDocument>({ email });
+    const user = await this.userModel.findOne({ email });
     return user;
+  }
+
+  private async checkPassword(attemptPass: string, user: UserDocument) {
+    const match = await bcrypt.compare(attemptPass, user.password || '');
+    if (!match) {
+      throw new NotFoundException('Wrong email or password.');
+    }
+    return match;
   }
 
   private async createAccessToken(userId: string, username: string) {
