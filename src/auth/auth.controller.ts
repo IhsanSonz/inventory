@@ -7,16 +7,13 @@ import {
   Post,
   Req,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { TransformInterceptor } from 'src/utils/transform/transform.interceptor';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
-import { AccessTokenGuard } from 'src/common/access-token/access-token.guard';
+import { AccessTokenGuard } from 'src/common/guards/access-token/access-token.guard';
 import { Request } from 'express';
 
 @Controller('auth')
-@UseInterceptors(TransformInterceptor)
 export class AuthController {
   constructor(private authService: AuthService) {}
 
